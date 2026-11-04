@@ -42,10 +42,12 @@ import { MapGenerationTools } from './tools/map-generation.js';
 import { TokenManipulationTools } from './tools/token-manipulation.js';
 
 import { DSA5CharacterCreator } from './systems/dsa5/character-creator.js';
+import { DSA5JsonActorImporter } from './systems/dsa5/json-actor-importer.js';
 
 import { DnD5eAddFeatureTool } from './tools/dnd5e/add-feature.js';
 import { DnD5eNpcTools } from './tools/dnd5e/npc.js';
 import { DnD5eFeaturesFromCompendiumTools } from './tools/dnd5e/features.js';
+import { ChatTools } from './tools/chat.js';
 
 const CONTROL_HOST = '127.0.0.1';
 
@@ -1200,6 +1202,7 @@ async function startBackend(): Promise<void> {
   const effectManagementTools = new EffectManagementTools({ foundryClient, logger });
 
   const dsa5CharacterCreator = new DSA5CharacterCreator({ foundryClient, logger });
+  const dsa5JsonActorImporter = new DSA5JsonActorImporter({ foundryClient, logger });
 
   const dnd5eAddFeatureTool = new DnD5eAddFeatureTool({ foundryClient, logger });
   const dnd5eNpcTools = new DnD5eNpcTools({ foundryClient, logger });
@@ -1209,6 +1212,8 @@ async function startBackend(): Promise<void> {
   });
 
   const questCreationTools = new QuestCreationTools({ foundryClient, logger });
+
+  const chatTools = new ChatTools({ foundryClient, logger });
 
   const diceRollTools = new DiceRollTools({ foundryClient, logger });
 
@@ -1429,12 +1434,15 @@ async function startBackend(): Promise<void> {
     ...effectManagementTools.getToolDefinitions(),
 
     ...dsa5CharacterCreator.getToolDefinitions(),
+    ...dsa5JsonActorImporter.getToolDefinitions(),
 
     ...dnd5eAddFeatureTool.getToolDefinitions(),
     ...dnd5eNpcTools.getToolDefinitions(),
     ...dnd5eFeaturesFromCompendiumTools.getToolDefinitions(),
 
     ...questCreationTools.getToolDefinitions(),
+
+    ...chatTools.getToolDefinitions(),
 
     ...diceRollTools.getToolDefinitions(),
 
@@ -1628,6 +1636,11 @@ async function startBackend(): Promise<void> {
 
                   break;
 
+                case 'import-dsa5-actor-from-json':
+                  result = await dsa5JsonActorImporter.handleImportActorFromJson(args);
+
+                  break;
+
                 // D&D 5e tools
 
                 case 'dnd5e-add-feature':
@@ -1643,6 +1656,13 @@ async function startBackend(): Promise<void> {
                 case 'dnd5e-add-features-from-compendium':
                   result =
                     await dnd5eFeaturesFromCompendiumTools.handleAddFeaturesFromCompendium(args);
+
+                  break;
+
+                // Chat tools
+
+                case 'create-chat-message':
+                  result = await chatTools.handleCreateChatMessage(args);
 
                   break;
 

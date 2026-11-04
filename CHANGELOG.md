@@ -1,3 +1,21 @@
+## v0.8.6 (2026-11-04)
+
+### New Features
+
+- **`create-chat-message`** (#114) — speak an in-character line as an actor, or as a specific token when several share one actor: a speech bubble over the token (the default), a chat-log message, or a whisper to named players. Supports Polyglot languages when that module is active. The line is always plain text, every whisper target must match exactly one user, and it needs Allow Write Operations.
+
+- **DSA5 character import from JSON** (#92) — `import-dsa5-actor-from-json` creates a DSA5 actor from a Dark Aid export, an Optolith-style or custom DSA5 JSON, or a raw Foundry actor export, passed inline or as a `.json` / `.tdc` file (10 MB limit). Re-importing with `updateExisting` updates the existing actor, its items and effects instead of creating a duplicate. Item matching against compendiums currently works in German-language worlds only. DSA5 worlds only.
+
+### Fixes
+
+- **`toggle-token-condition` and `get-available-conditions` in PF2e and dnd5e** (#88, fixed in #130) — PF2e replaces Foundry's status effect list with an object, so both tools threw in PF2e worlds; and even past that, adding a PF2e condition did nothing because PF2e conditions are Items. On dnd5e, removing a condition deleted any effect that merely included it, so removing Incapacitated also deleted a Paralyzed effect. Conditions are now added and removed through Foundry's own `toggleStatusEffect`, which each system implements correctly. DSA5 behaves as before.
+
+- **Enhanced Creature Index skipped packs with non-Latin1 labels** (#127) — the pack checksum used `btoa()`, which throws on characters such as Cyrillic or CJK, so any Actor pack with a localized label (e.g. `# Чудовища том 1`) was silently left out of the index and the persisted index was never considered valid. The label is now UTF-8 encoded before hashing.
+
+- **dnd5e `size` filter in `list-creatures-by-criteria` never matched** (#127) — the index stores dnd5e's short size keys (`sm`, `med`, `lg`, `grg`) while the tool accepts full words; both sides are now normalized before comparing. Results from the index also report the creature's real size instead of always `medium`.
+
+- **Windows installer didn't configure Claude Desktop in third-party mode** (#124, fixed in #129) — Claude Desktop set up to use Claude through AWS Bedrock or Google Vertex AI reads its config from `%APPDATA%\Claude-3p\`, which the installer never wrote. It now also configures that folder when it exists; standard installs are unaffected.
+
 ## v0.8.5 (2026-10-17)
 
 ### New Features

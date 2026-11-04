@@ -58,6 +58,8 @@ export class QueryHandlers {
     // Phase 2 & 3: Write operation queries
     CONFIG.queries[`${modulePrefix}.createActorFromCompendium`] =
       this.handleCreateActorFromCompendium.bind(this);
+    CONFIG.queries[`${modulePrefix}.createActorFromData`] =
+      this.handleCreateActorFromData.bind(this);
     CONFIG.queries[`${modulePrefix}.getCompendiumDocumentFull`] =
       this.handleGetCompendiumDocumentFull.bind(this);
     CONFIG.queries[`${modulePrefix}.addActorsToScene`] = this.handleAddActorsToScene.bind(this);
@@ -92,6 +94,9 @@ export class QueryHandlers {
       this.handleGetConnectedPlayers.bind(this);
     CONFIG.queries[`${modulePrefix}.findPlayers`] = this.handleFindPlayers.bind(this);
     CONFIG.queries[`${modulePrefix}.findActor`] = this.handleFindActor.bind(this);
+
+    // In-character chat: bubbles, chat-log lines and whispers
+    CONFIG.queries[`${modulePrefix}.createChatMessage`] = this.handleCreateChatMessage.bind(this);
 
     // WFRP4e actor stat-block update
     CONFIG.queries[`${modulePrefix}.updateWfrp4eActor`] = this.handleUpdateWfrp4eActor.bind(this);
@@ -963,6 +968,24 @@ export class QueryHandlers {
     }
   }
 
+  async handleCreateChatMessage(data: any): Promise<any> {
+    try {
+      // SECURITY: Silent GM validation
+      const gmCheck = this.validateGMAccess();
+      if (!gmCheck.allowed) {
+        return { error: 'Access denied', success: false };
+      }
+
+      this.dataAccess.validateFoundryState();
+
+      return await this.dataAccess.createChatMessage(data);
+    } catch (error) {
+      throw new Error(
+        `Failed to create chat message: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
   /**
    * Handle get friendly NPCs request
    */
@@ -1117,6 +1140,63 @@ export class QueryHandlers {
     } catch (error) {
       throw new Error(
         `Failed to switch scene: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  private async handleCreateActorFromData(data: {
+    actorData: Record<string, unknown>;
+    addToScene?: boolean;
+    updateExisting?: boolean;
+    existingActorIdentifier?: string;
+    preserveItemTypes?: string[];
+    placement?: {
+      type: 'random' | 'grid' | 'center' | 'coordinates';
+      coordinates?: { x: number; y: number }[];
+    };
+  }): Promise<any> {
+    try {
+      // SECURITY: Silent GM validation
+      const gmCheck = this.validateGMAccess();
+      if (!gmCheck.allowed) {
+        return { error: 'Access denied', success: false };
+      }
+
+      this.dataAccess.validateFoundryState();
+
+      if (!data?.actorData || typeof data.actorData !== 'object') {
+        throw new Error('actorData object is required');
+      }
+
+      const requestData: {
+        actorData: Record<string, unknown>;
+        addToScene?: boolean;
+        updateExisting?: boolean;
+        existingActorIdentifier?: string;
+        preserveItemTypes?: string[];
+        placement?: {
+          type: 'random' | 'grid' | 'center' | 'coordinates';
+          coordinates?: { x: number; y: number }[];
+        };
+      } = {
+        actorData: data.actorData,
+        addToScene: data.addToScene ?? false,
+        updateExisting: data.updateExisting ?? false,
+      };
+      if (data.existingActorIdentifier) {
+        requestData.existingActorIdentifier = data.existingActorIdentifier;
+      }
+      if (data.preserveItemTypes?.length) {
+        requestData.preserveItemTypes = data.preserveItemTypes;
+      }
+      if (data.placement) {
+        requestData.placement = data.placement;
+      }
+
+      return await this.dataAccess.createActorFromData(requestData);
+    } catch (error) {
+      throw new Error(
+        `Failed to create actor from data: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
