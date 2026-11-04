@@ -29,7 +29,9 @@
     "audit:unused": "npx knip",
     "audit:circular": "npx madge --circular --extensions ts packages/mcp-server/src packages/foundry-module/src shared/src",
     "size:analyze": "npm run bundle:server && npx esbuild-analyzer packages/mcp-server/dist/backend.bundle.cjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build:ai-creation": "npm --prefix extensions/ai-creation-bridge run build",
+    "test:ai-creation": "npm --prefix extensions/ai-creation-bridge test"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

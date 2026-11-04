@@ -1,0 +1,14 @@
+# Merge this section into your Codex config; do not replace the whole file.
+# Replace installation paths for this computer. Use Node 20 or newer.
+[mcp_servers.foundry]
+command = 'C:\PATH\TO\node.exe'
+args = ['--preserve-symlinks', '--preserve-symlinks-main', 'C:\PATH\TO\foundry-vtt-mcp\extensions\ai-creation-bridge\outputs\portrait-bridge\local\index.cjs']
+enabled = true
+startup_timeout_sec = 120
+tool_timeout_sec = 90
+
+[mcp_servers.foundry.env]
+FOUNDRY_CONTROL_PORT = '31424'
+COMFYUI_AUTO_START = 'false'
+# Optional override: a dedicated existing upload folder, not your home directory.
+# FOUNDRY_UPLOAD_ROOT = 'C:\FoundryUploads'

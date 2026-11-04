@@ -1,0 +1,64 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const {pathToFileURL} = require('node:url');
+const {webcrypto} = require('node:crypto');
+const root = path.resolve(__dirname, '../outputs/portrait-bridge/ai-portrait-bridge');
+(async () => {
+  const policy = await import(pathToFileURL(path.join(root, 'creation-policy.mjs')).href);
+  const {makeCreationHandlers, decodeIndex} = await import(pathToFileURL(path.join(root, 'creation-module.mjs')).href);
+  const metadata = Buffer.from(JSON.stringify({m:{s:{PHB:0}},x:Array.from({length:1001},(_,i)=>({id:i,n:'Goblin Test '+i,c:1,s:0,u:'goblin-test-'+i,h:1,p:1}))}));
+  const decoded = decodeIndex(JSON.parse(metadata));
+  assert(decoded.length > 1000); assert(decoded.some(row => row.s === 'PHB'));
+  console.log('PASS synthetic compressed Plutonium metadata decodes without loading book content');
+  let gm = true, writes = true, indexReads = 0, detailReads = 0, pcCreates = 0;
+  const documents = () => { const map = new Map(); map[Symbol.iterator] = function* () { yield* this.values(); }; return map; };
+  global.game = {system: {id: 'dnd5e'}, modules: new Map([['plutonium', {active: true}]]), actors: documents(), folders: documents()};
+  global.document = {baseURI: 'https://foundry.example/game'};
+  if (!global.crypto) Object.defineProperty(global, 'crypto', {value: webcrypto});
+  global.fetch = async url => { assert.equal(new URL(url).pathname, '/modules/plutonium/search/index-foundry.json'); indexReads++; return new Response(metadata); };
+  global.UrlUtil = {categoryToHoverPage: c => `category-${c}`};
+  global.Parser = {pageCategoryToProp: () => 'monster'};
+  global.ExcludeUtil = {isExcluded: () => false};
+  global.DataLoader = {pCacheAndGet: async (page, source, hash) => { detailReads++; assert(page); assert(source); assert(hash); return {name: 'Selected Entry', source, entries: ['Detailed entry '.repeat(1000)]}; }};
+  const handlers = makeCreationHandlers({requireGM() { if (!gm) throw new Error('GM required'); }, requireWrites() { if (!gm || !writes) throw new Error('Writes denied'); }, serialize: operation => operation()});
+  const search = await handlers.search({query: 'goblin', category: 'creature', limit: 3});
+  assert(search.results.length > 0 && search.results.length <= 3); assert.equal(detailReads, 0);
+  assert(search.results.every(row => Object.keys(row).every(k => ['entryId','name','category','source','page'].includes(k))));
+  await handlers.search({query: 'goblin', category: 'creature', source: search.results[0].source, limit: 1});
+  assert.equal(indexReads, 1);
+  const detail = await handlers.getEntry({entryId: search.results[0].entryId, maxCharacters: 200});
+  assert.equal(detail.details.length, 200); assert(detail.truncated); assert.equal(detailReads, 1);
+  console.log('PASS search returns tiny metadata pages; one selected detail is fetched and bounded');
+  for (const raw of [{query: ''}, {query: 'a'}, {query: 'ab', limit: 21}, {query: 'ab', url: 'https://example.com'}, {query: 'ab', category: 'scene'}]) assert.throws(() => policy.searchArgs(raw));
+  await assert.rejects(() => handlers.getEntry({entryId: 999999}));
+  gm = false; await assert.rejects(() => handlers.search({query: 'goblin'})); gm = true;
+  console.log('PASS search limits, caller URLs, unsupported categories and non-GM access are rejected');
+  let nextId = 0;
+  global.foundry = {utils: {randomID: () => `testItem${String(++nextId).padStart(8,'0')}`}};
+  global.CONFIG = {Folder: {documentClass: {create: async data => { const folder = {...data, id: 'folder0000000001'}; game.folders.set(folder.id, folder); return folder; }}},
+    Actor: {documentClass: {create: async (data, options) => {
+      pcCreates++; assert.equal(data.type, 'character'); assert.equal(options.renderSheet, false); assert.equal(options.keepEmbeddedIds, true);
+      assert.equal(data.prototypeToken.actorLink, true); assert.equal(data.prototypeToken.texture.scaleX, 1); assert.equal(data.ownership.default, 0);
+      const actor = structuredClone(data); actor.id = `actor0000000000${pcCreates}`;
+      actor.system.details.level = actor.items.filter(i => i.type === 'class').reduce((n, i) => n + i.system.levels, 0);
+      assert.equal(actor.system.details.originalClass, actor.items.find(i => i.type === 'class')._id);
+      actor.system.attributes.ac = {value: 16}; actor.items = new Map(actor.items.map(i => [i._id, i]));
+      game.actors.set(actor.id, actor); return actor;
+    }}}};
+  const build = {requestId: 'prepared-pc-test-001', name: 'Test Adventurer', system: {
+    abilities: Object.fromEntries(['str','dex','con','int','wis','cha'].map(key => [key, {value: 14}])), attributes: {hp: {value: 38, max: 38}}},
+    items: [{name: 'Rogue', type: 'class', system: {levels: 5}}, {name: 'Thief', type: 'subclass', system: {classIdentifier: 'rogue'}}]};
+  const created = await handlers.createPC(build); assert(created.success); assert.equal(created.level, 5); assert.equal(created.placedToken, false);
+  assert.equal((await handlers.createPC({...build, system: {attributes: build.system.attributes, abilities: build.system.abilities}})).reused, true);
+  assert.equal(pcCreates, 1);
+  await assert.rejects(() => handlers.createPC({...build, name: 'Changed'}), /different PC build/);
+  await assert.rejects(() => handlers.createPC({...build, requestId: 'prepared-pc-test-002'}), /already has this name/);
+  console.log('PASS one prepared PC created with stable retries, class level, linked prototype and no scene changes');
+  for (const raw of [{...build, deleteScenes: true}, {...build, items: [{name: 'Scene', type: 'scene', system: {}}]}, {...build, items: [{name: 'Rogue', type: 'class', system: {levels: 21}}]}, {...build, portraitPath: 'worlds/private.png'}]) assert.throws(() => policy.pcArgs(raw));
+  writes = false; await assert.rejects(() => handlers.createPC(build), /denied/);
+  const code = fs.readFileSync(path.join(root, 'creation-module.mjs'), 'utf8'); assert(!/\.delete(?:Documents)?\s*\(/.test(code)); assert(!/game\.scenes|CONFIG\.Scene/.test(code));
+  console.log('PASS PC guardrails reject invalid builds and disabled writes; no scene or document deletion exists');
+  console.log('ALL FOCUSED CREATION CHECKS PASSED — no live imports or random PCs created');
+})().catch(error => {console.error(error); process.exitCode = 1;});

@@ -1,0 +1,10 @@
+outputs/*.png
+outputs/portrait-bridge/local/index.cjs
+outputs/portrait-bridge/local/backend.bundle.cjs
+outputs/portrait-bridge/local/build-info.json
+outputs/portrait-bridge/local/*-policy.mjs
+*.lock
+*.log
+uploads/
+config.local.*
+work/portrait-test-files/

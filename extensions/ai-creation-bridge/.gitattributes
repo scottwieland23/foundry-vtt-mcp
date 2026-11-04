@@ -1,0 +1,2 @@
+# Keep pinned distribution inputs byte-for-byte identical for hash checks.
+upstream-baseline/*.cjs -text -whitespace

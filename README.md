@@ -256,3 +256,7 @@ npm run test:mcp:schema
 - **YouTube Channel**: [Subscribe for updates and tutorials](https://www.youtube.com/channel/UCVrSC-FzuAk5AgvfboJj0WA)
 - **Documentation**: Built with TypeScript, comprehensive documentation included
 - **License**: MIT License (Additional Third Party licenses are included for bundled components for the installers)
+
+## Personal AI Creation Bridge extension
+
+The tested Foundry 14 extension (portraits, maps, PCs, walls, lights and vision) is documented in [extensions/ai-creation-bridge](extensions/ai-creation-bridge/README.md). It uses the pinned 0.8.5 runtime and preserves user-only scene deletion.
