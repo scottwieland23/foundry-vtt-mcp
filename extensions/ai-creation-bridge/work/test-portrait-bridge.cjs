@@ -60,7 +60,7 @@ async function test(name, fn) { await fn(); passed++; console.log(`PASS ${name}`
   const calls = [];
   const client = {query: async (name, args) => {
     calls.push({name, args});
-    if (name.endsWith('.status')) return {version: '1.3.0', sceneCreation: true, sceneDeletionAllowed: false, folder: policy.FOLDER, mapFolder: policy.MAP_FOLDER, enabled: true, bridgeWritesEnabled: true};
+    if (name.endsWith('.status')) return {version: '1.5.0', sceneCreation: true, sceneDeletionAllowed: false, folder: policy.FOLDER, mapFolder: policy.MAP_FOLDER, enabled: true, bridgeWritesEnabled: true};
     if (name.endsWith('.upload')) return {success: true, path: policy.portraitPath(args.sha256, args.fileName)};
     if (name.endsWith('.uploadMap')) return {success: true, path: policy.mapPath(args.sha256, args.fileName)};
     return {success: true};

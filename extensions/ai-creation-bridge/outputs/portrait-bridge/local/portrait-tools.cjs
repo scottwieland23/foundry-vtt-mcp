@@ -115,7 +115,7 @@ function createPortraitTools(foundryClient, localRoot) {
       if (name === 'create-scene-from-map') {
         const validated = policy.validateCreateSceneArgs(args);
         const status = await foundryClient.query(`${NAMESPACE}.status`, {});
-        if (!['1.3.0', '1.4.0'].includes(status?.version) || status.sceneCreation !== true || status.sceneDeletionAllowed !== false) throw new Error('Refresh the Foundry browser tab to load AI Image Bridge 1.3.0 before creating scenes.');
+        if (!['1.3.0', '1.4.0', '1.5.0'].includes(status?.version) || status.sceneCreation !== true || status.sceneDeletionAllowed !== false) throw new Error('Refresh the Foundry browser tab to load a compatible AI Creation Bridge with scene creation enabled.');
         return await foundryClient.query(`${NAMESPACE}.createSceneFromMap`, validated);
       }
       throw new Error(`Unknown portrait tool: ${name}`);
