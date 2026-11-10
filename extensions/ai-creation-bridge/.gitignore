@@ -8,3 +8,4 @@ outputs/portrait-bridge/local/*-policy.mjs
 uploads/
 config.local.*
 work/portrait-test-files/
+outputs/portrait-bridge/local/module-schemas.cjs

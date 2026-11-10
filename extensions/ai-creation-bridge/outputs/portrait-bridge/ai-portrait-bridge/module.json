@@ -2,7 +2,7 @@
   "id": "ai-portrait-bridge",
   "title": "AI Creation Bridge — Scenes, Vision and Characters",
   "description": "Adds folder-restricted PNG uploads for portraits and maps, with actor/token artwork and scene background/creation tools. Scene deletion is reserved for the user.",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "compatibility": {"minimum": "14", "verified": "14", "maximum": "14"},
   "authors": [{"name": "Local custom integration"}],
   "esmodules": ["portrait-module.mjs"],

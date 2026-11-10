@@ -20,7 +20,7 @@ const definitions=[
 function createEnvironmentTools(client){const policy=import(pathToFileURL(path.join(__dirname,'environment-policy.mjs')).href);return {async handle(name,args){const p=await policy;
   const routes={'get-scene-environment':['readEnvironment',p.readArgs],'manage-scene-walls':['manageWalls',raw=>p.manageArgs(raw,'walls')],'manage-scene-lights':['manageLights',raw=>p.manageArgs(raw,'lights')],'set-scene-visibility':['setVisibility',p.visibilityArgs],'set-token-vision':['setTokenVision',p.tokenVisionArgs],'reset-scene-fog':['resetFog',p.resetArgs]};
   const route=routes[name];if(!route)throw new Error('Unsupported environment tool.');route[1](args);
-  const status=await client.query('ai-portrait-bridge.status',{});if(status?.version!=='1.5.0')throw new Error('Refresh Foundry to load AI Creation Bridge 1.5.0 before using environment tools.');
+  const status=await client.query('ai-portrait-bridge.status',{});if(!['1.5.0','1.6.0'].includes(status?.version))throw new Error('Refresh Foundry to load AI Creation Bridge 1.5.0 or newer before using environment tools.');
   return client.query(`ai-portrait-bridge.${route[0]}`,args);
 }};}
 module.exports={definitions,createEnvironmentTools};

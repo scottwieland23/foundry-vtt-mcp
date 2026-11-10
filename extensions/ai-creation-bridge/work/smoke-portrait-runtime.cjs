@@ -37,9 +37,10 @@ child.stdout.on('data', chunk => {
       }
       if (message.id === 2) {
         toolNames = message.result.tools.map(t => t.name);
-        assert.equal(toolNames.length, 64);
+        assert.equal(toolNames.length, 76);
+        for (const tool of require(path.join(runtime, "module-schemas.cjs")).definitions) assert(toolNames.includes(tool.name));
         for (const name of ['portrait-bridge-status', 'upload-portrait', 'set-actor-artwork', 'upload-map', 'get-scene-map', 'set-scene-map', 'create-scene-from-map', 'search-plutonium', 'get-plutonium-entry', 'create-player-character', 'get-scene-environment', 'manage-scene-walls', 'manage-scene-lights', 'set-scene-visibility', 'set-token-vision', 'reset-scene-fog', 'get-world-info']) assert(toolNames.includes(name));
-        console.log('PASS 64 tools discovered, including all 48 original tools');
+        console.log('PASS 76 tools discovered, including all 48 original tools');
         const probe = net.connect({host: '127.0.0.1', port: 31434});
         probe.on('error', fail);
         probe.on('connect', () => {

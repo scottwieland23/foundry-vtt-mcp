@@ -1,13 +1,13 @@
 {
   "name": "foundry-ai-creation-extension",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.6.0",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "build": "node work/build-portrait-bridge.cjs",
-    "test": "node work/make-fixtures.cjs && node work/test-portrait-bridge.cjs && node work/test-creation-bridge.cjs && node work/test-environment-bridge.cjs",
+    "test": "node work/make-fixtures.cjs && node work/test-portrait-bridge.cjs && node work/test-creation-bridge.cjs && node work/test-environment-bridge.cjs && node work/test-module-bridge.cjs",
     "test:runtime": "node work/smoke-portrait-runtime.cjs"
   }
 }

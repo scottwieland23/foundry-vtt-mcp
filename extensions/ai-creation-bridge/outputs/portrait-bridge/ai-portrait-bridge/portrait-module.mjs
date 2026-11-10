@@ -2,6 +2,7 @@ import {FOLDER, MAX_BYTES, MAX_EDGE, MAP_FOLDER, MAP_LIMITS, exactKeys, validate
   decodePayload, validateArtworkArgs, validateSceneMapArgs, validateCreateSceneArgs} from './portrait-policy.mjs';
 import {makeCreationHandlers} from './creation-module.mjs';
 import {makeEnvironmentHandlers} from './environment-module.mjs';
+import {makeModuleHandlers} from './module-module.mjs';
 
 const ID = 'ai-portrait-bridge';
 const BASE = 'foundry-mcp-bridge';
@@ -221,7 +222,7 @@ Hooks.once('ready', () => {
   if (!game.user?.isGM || !game.modules.get(BASE)?.active) return;
   CONFIG.queries[`${ID}.status`] = async () => {
     requireGM();
-    return {version: '1.5.0', sceneCreation: true, sceneDeletionAllowed: false, pcCreation: true, environmentTools: true,
+    return {version: '1.6.0', sceneCreation: true, sceneDeletionAllowed: false, pcCreation: true, environmentTools: true, moduleTools: true,
       plutonium: {active: !!game.modules.get('plutonium')?.active, version: game.modules.get('plutonium')?.version ?? null, searchReady: !!globalThis.DataLoader?.pCacheAndGet},
       folder: FOLDER, maxBytes: MAX_BYTES, maxEdge: MAX_EDGE, artworkScale: 1, readableFilenames: true,
       mapFolder: MAP_FOLDER, mapMaxBytes: MAP_LIMITS.maxBytes, mapMaxEdge: MAP_LIMITS.maxEdge,
@@ -245,5 +246,7 @@ Hooks.once('ready', () => {
   CONFIG.queries[`${ID}.setVisibility`] = environment.visibility;
   CONFIG.queries[`${ID}.setTokenVision`] = environment.tokenVision;
   CONFIG.queries[`${ID}.resetFog`] = environment.resetFog;
+  const modules = makeModuleHandlers({requireGM, requireWrites, serialize});
+  for (const [name, handler] of Object.entries(modules)) CONFIG.queries[`${ID}.module.${name}`] = handler;
   console.info(`${ID}: ready; upload destination is fixed to ${FOLDER}.`);
 });

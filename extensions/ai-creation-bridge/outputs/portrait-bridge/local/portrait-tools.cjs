@@ -12,9 +12,11 @@ const definition = (name, description, properties, required, readOnly = false) =
 });
 const creationTools = require('./creation-tools.cjs');
 const environmentTools = require('./environment-tools.cjs');
+const moduleTools = require('./module-tools.cjs');
 const definitions = [
   ...creationTools.definitions,
   ...environmentTools.definitions,
+  ...moduleTools.definitions,
   definition('portrait-bridge-status', 'Check whether the dedicated-folder portrait companion is enabled in the connected Foundry world.', {}, [], true),
   definition('upload-portrait', 'Upload a PNG from the configured local artwork folder to the fixed Foundry ai-portraits folder. Supply a plain filename, never an absolute path. The server keeps a readable filename plus a short content-hash version suffix. Maximum 5 MiB and 4096 pixels per side. Destination folders cannot be selected.',
     {fileName: {type: 'string', description: 'Plain filename in the configured local artwork folder, for example vhalzareth-portrait.png.'}}, ['fileName']),
@@ -78,12 +80,14 @@ async function readBoundedPng(root, name, policy, limits) {
 function createPortraitTools(foundryClient, localRoot) {
   const creation = creationTools.createCreationTools(foundryClient);
   const environment = environmentTools.createEnvironmentTools(foundryClient);
+  const modules = moduleTools.createModuleTools(foundryClient);
   const policyPromise = import(pathToFileURL(path.join(__dirname, 'portrait-policy.mjs')).href);
   return {
     definitions,
     async handle(name, args) {
       const policy = await policyPromise;
       if (environmentTools.definitions.some(d => d.name === name)) return environment.handle(name, args);
+      if (moduleTools.definitions.some(d => d.name === name)) return modules.handle(name, args);
       if (creationTools.definitions.some(d => d.name === name)) return creation.handle(name, args);
       if (name === 'portrait-bridge-status') {
         policy.exactKeys(args, []);
@@ -94,7 +98,7 @@ function createPortraitTools(foundryClient, localRoot) {
         policy.exactKeys(args, ['fileName']);
         policy.validateLocalName(args.fileName);
         const status = await foundryClient.query(`${NAMESPACE}.status`, {});
-        if (!['1.1.0', '1.2.0', '1.3.0', '1.4.0', '1.5.0'].includes(status?.version) || (isMap && status.mapFolder !== policy.MAP_FOLDER)) {
+        if (!['1.1.0', '1.2.0', '1.3.0', '1.4.0', '1.5.0', '1.6.0'].includes(status?.version) || (isMap && status.mapFolder !== policy.MAP_FOLDER)) {
           throw new Error('Refresh the Foundry browser tab to load the current AI Image Bridge before uploading.');
         }
         if (status?.folder !== policy.FOLDER || status?.enabled !== true || status?.bridgeWritesEnabled !== true) {
@@ -115,7 +119,7 @@ function createPortraitTools(foundryClient, localRoot) {
       if (name === 'create-scene-from-map') {
         const validated = policy.validateCreateSceneArgs(args);
         const status = await foundryClient.query(`${NAMESPACE}.status`, {});
-        if (!['1.3.0', '1.4.0', '1.5.0'].includes(status?.version) || status.sceneCreation !== true || status.sceneDeletionAllowed !== false) throw new Error('Refresh the Foundry browser tab to load a compatible AI Creation Bridge with scene creation enabled.');
+        if (!['1.3.0', '1.4.0', '1.5.0', '1.6.0'].includes(status?.version) || status.sceneCreation !== true || status.sceneDeletionAllowed !== false) throw new Error('Refresh the Foundry browser tab to load a compatible AI Creation Bridge with scene creation enabled.');
         return await foundryClient.query(`${NAMESPACE}.createSceneFromMap`, validated);
       }
       throw new Error(`Unknown portrait tool: ${name}`);

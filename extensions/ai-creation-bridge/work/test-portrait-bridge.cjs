@@ -76,7 +76,7 @@ async function test(name, fn) { await fn(); passed++; console.log(`PASS ${name}`
   await test('MCP caller cannot select a destination or arbitrary local file', async () => {
     await assert.rejects(() => tools.handle('upload-portrait', {fileName: 'vhalzareth-portrait.png', destination: 'worlds'}));
     await assert.rejects(() => tools.handle('upload-portrait', {fileName: '../secret.png'}));
-    assert.equal(definitions.length, 16);
+    assert.equal(definitions.length, 28);
     assert(definitions.every(d => d.inputSchema.additionalProperties === false));
   });
 
@@ -201,8 +201,8 @@ async function test(name, fn) { await fn(); passed++; console.log(`PASS ${name}`
     failTokens = false;
     assert.equal((await module.setArtwork({actorId, path: expectedPath, updateSceneTokens: true})).success, true);
   });
-  await test('sixteen companion handlers register with the existing bridge namespace', async () => {
-    assert.deepEqual(Object.keys(CONFIG.queries).sort(), ['ai-portrait-bridge.createPlayerCharacter', 'ai-portrait-bridge.createSceneFromMap', 'ai-portrait-bridge.getPlutoniumEntry', 'ai-portrait-bridge.getSceneMap', 'ai-portrait-bridge.manageLights', 'ai-portrait-bridge.manageWalls', 'ai-portrait-bridge.readEnvironment', 'ai-portrait-bridge.resetFog', 'ai-portrait-bridge.searchPlutonium', 'ai-portrait-bridge.setArtwork', 'ai-portrait-bridge.setSceneMap', 'ai-portrait-bridge.setTokenVision', 'ai-portrait-bridge.setVisibility', 'ai-portrait-bridge.status', 'ai-portrait-bridge.upload', 'ai-portrait-bridge.uploadMap']);
+  await test('core companion handlers register with the existing bridge namespace', async () => {
+    assert.deepEqual(Object.keys(CONFIG.queries).filter(name => !name.startsWith("ai-portrait-bridge.module.")).sort(), ['ai-portrait-bridge.createPlayerCharacter', 'ai-portrait-bridge.createSceneFromMap', 'ai-portrait-bridge.getPlutoniumEntry', 'ai-portrait-bridge.getSceneMap', 'ai-portrait-bridge.manageLights', 'ai-portrait-bridge.manageWalls', 'ai-portrait-bridge.readEnvironment', 'ai-portrait-bridge.resetFog', 'ai-portrait-bridge.searchPlutonium', 'ai-portrait-bridge.setArtwork', 'ai-portrait-bridge.setSceneMap', 'ai-portrait-bridge.setTokenVision', 'ai-portrait-bridge.setVisibility', 'ai-portrait-bridge.status', 'ai-portrait-bridge.upload', 'ai-portrait-bridge.uploadMap']);
     assert.equal((await CONFIG.queries['ai-portrait-bridge.status']()).folder, 'ai-portraits');
   });
   const map = await fs.readFile(path.resolve(__dirname, '../outputs/long-table-fountain-square.png'));
@@ -346,7 +346,7 @@ async function test(name, fn) { await fn(); passed++; console.log(`PASS ${name}`
     for (const name of ['create-scene-from-map', 'set-scene-map', 'manage-actors', 'get-world-info']) assertAllowedTool(name);
     const status = await CONFIG.queries['ai-portrait-bridge.status']();
     assert.equal(status.sceneDeletionAllowed, false); assert.equal(status.sceneCreation, true);
-    assert.equal(status.version, '1.5.0');
+    assert.equal(status.version, '1.6.0');
     assert(!Object.keys(CONFIG.queries).some(name => /delete/i.test(name)));
     const code = await fs.readFile(path.join(root, 'ai-portrait-bridge/portrait-module.mjs'), 'utf8');
     assert(!/\.delete(?:Documents)?\s*\(/.test(code), 'Companion must never delete a document, including error cleanup');

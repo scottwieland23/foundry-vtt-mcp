@@ -29,7 +29,7 @@ function createCreationTools(client) {
     const route = routes[name]; if (!route) throw new Error('Unsupported creation tool.');
     route[1](args);
     const status = await client.query('ai-portrait-bridge.status', {});
-    if (!['1.4.0','1.5.0'].includes(status?.version)) throw new Error('Refresh Foundry to load AI Creation Bridge 1.4.0 before using these tools.');
+    if (!['1.4.0','1.5.0','1.6.0'].includes(status?.version)) throw new Error('Refresh Foundry to load AI Creation Bridge 1.4.0 or newer before using these tools.');
     return client.query(`ai-portrait-bridge.${route[0]}`, args);
   }};
 }
