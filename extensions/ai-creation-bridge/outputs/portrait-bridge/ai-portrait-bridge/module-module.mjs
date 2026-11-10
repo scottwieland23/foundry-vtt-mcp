@@ -64,13 +64,18 @@ function itemPileApi() {
   return game.itempiles?.API;
 }
 
-function mediaPath(path, library) {
-  if (typeof path !== 'string' || path.length > 400) return false;
+function decodedModulePath(path, module) {
+  if (typeof path !== 'string' || path.length > 400) return '';
   let decoded;
-  try { decoded = decodeURIComponent(path); } catch { return false; }
+  try { decoded = decodeURIComponent(path); } catch { return ''; }
+  if (!decoded.startsWith('modules/' + module + '/') || decoded.includes('\\') ||
+      /[%?#:\u0000-\u001f]/.test(decoded) || decoded.split('/').some(s => s === '..' || s === '.')) return '';
+  return decoded;
+}
+
+function mediaPath(path, library) {
   const info = libraries[library];
-  if (!decoded.startsWith('modules/' + info.module + '/') || decoded.includes('\\') ||
-      /[%?#:\u0000-\u001f]/.test(decoded) || decoded.split('/').some(s => s === '..' || s === '.')) return false;
+  const decoded = decodedModulePath(path, info.module);
   return info.kind === 'sound' ? /\.(ogg|wav|mp3|flac|m4a|opus)$/i.test(decoded) : /\.(webm|mp4|png|webp)$/i.test(decoded);
 }
 
@@ -102,18 +107,36 @@ export function makeModuleHandlers({requireGM, requireWrites, serialize}) {
   let libraryFiles;
   let routeRunning = false;
 
+  async function browseSoundFx() {
+    const picker = foundry.applications.apps.FilePicker.implementation;
+    const prefix = 'modules/soundfxlibrary/';
+    const pending = soundFolders.map(folder => prefix + folder);
+    const visited = new Set(pending);
+    const files = new Set();
+    const dataPath = path => typeof path === 'string' ? path.replace(/^\/(?=modules\/)/, '') : '';
+    while (pending.length) {
+      const results = await Promise.all(pending.splice(0, 6).map(folder => picker.browse('data', folder)));
+      for (const result of results) {
+        for (const path of result.files ?? []) {
+          const file = dataPath(path);
+          if (mediaPath(file, 'soundfxlibrary')) files.add(file);
+        }
+        for (const path of result.dirs ?? []) {
+          const folder = dataPath(path).replace(/\/$/, '');
+          if (!decodedModulePath(folder, 'soundfxlibrary') || visited.has(folder)) continue;
+          if (visited.size >= 128) throw Error('The installed SoundFx Library exceeds the bridge’s folder limit.');
+          visited.add(folder);
+          pending.push(folder);
+        }
+      }
+    }
+    return [...files].sort();
+  }
+
   async function soundFxFiles() {
     moduleActive('soundfxlibrary');
     if (!libraryFiles) {
-      libraryFiles = (async () => {
-        const picker = foundry.applications.apps.FilePicker.implementation;
-        const files = [];
-        for (const folder of soundFolders) {
-          const result = await picker.browse('data', 'modules/soundfxlibrary/' + folder);
-          files.push(...(result.files ?? []).filter(file => mediaPath(file, 'soundfxlibrary')));
-        }
-        return [...new Set(files)].sort();
-      })().catch(error => { libraryFiles = undefined; throw error; });
+      libraryFiles = browseSoundFx().catch(error => { libraryFiles = undefined; throw error; });
     }
     return libraryFiles;
   }
@@ -142,7 +165,8 @@ export function makeModuleHandlers({requireGM, requireWrites, serialize}) {
       routingLib: typeof globalThis.routinglib?.calculatePath === 'function',
       diceSoNice: !!game.dice3d
     };
-    return {worldId:game.world.id, system:game.system.id, activeModules:modules, ready,
+    return {worldId:game.world.id, system:game.system.id, viewedSceneId:globalThis.canvas?.scene?.id ?? null,
+      canvasReady:!!globalThis.canvas?.ready, activeModules:modules, ready,
       tools:definitions.map(tool => tool.name),
       nativeUiModules:['dice-calculator','dice-so-nice','healthEstimate','token-action-hud-core','token-action-hud-dnd5e'],
       supportModules:['socketlib','lib-wrapper','itempilesdnd5e']};
@@ -281,8 +305,15 @@ export function makeModuleHandlers({requireGM, requireWrites, serialize}) {
 
   async function searchMedia(args) {
     moduleActive(libraries[args.library].module);
-    const paths = args.library === 'soundfxlibrary' ? await soundFxFiles() :
-      method(sequenceDatabase(), 'getPathsUnder', 'Sequencer database')(args.library, {fullyQualified:true, ranges:true});
+    let paths;
+    if (args.library === 'soundfxlibrary') paths = await soundFxFiles();
+    else {
+      const db = sequenceDatabase();
+      if (!method(db, 'entryExists', 'Sequencer database')(args.library)) {
+        throw Error('Open a scene in the connected GM tab so Sequencer can load this library.');
+      }
+      paths = method(db, 'getPathsUnder', 'Sequencer database')(args.library, {fullyQualified:true, ranges:true});
+    }
     if (!Array.isArray(paths)) throw Error('The selected media library is still initializing.');
     return {library:args.library, kind:libraries[args.library].kind,
       ...pageOf(paths.filter(p => typeof p === 'string' && p.length <= 400), args)};
@@ -403,6 +434,7 @@ export function makeModuleHandlers({requireGM, requireWrites, serialize}) {
       return {x:j,y:i};
     };
     const api = globalThis.routinglib;
+    if (!api) throw Error('Reload the connected GM tab with the selected scene open to initialize RoutingLib.');
     const calculate = method(api,'calculatePath','RoutingLib');
     const cancel = method(api,'cancelPathfinding','RoutingLib');
     let timer;

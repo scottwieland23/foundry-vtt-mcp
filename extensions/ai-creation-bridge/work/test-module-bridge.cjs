@@ -11,7 +11,7 @@ const mount = {...token, id:mountId};
 const scene = {id:sceneId, dimensions:{width:1000,height:1000}, tokens:new Map([[tokenId,token],[mountId,mount]]),
   tiles:new Map(), levels:new Map([[levelId,{id:levelId}]])};
 const modules = new Map(['item-piles','itempilesdnd5e','monks-active-tiles','tagger','Rideable','sequencer','JB2A_DnD5e',
-  'fxmaster','animater','vtta-tokenizer','monks-tokenbar','routinglib'].map(id => [id,{id,active:true}]));
+  'fxmaster','animater','vtta-tokenizer','monks-tokenbar','routinglib','soundfxlibrary'].map(id => [id,{id,active:true}]));
 globalThis.crypto ??= webcrypto;
 globalThis.game = {world:{id:'fixture'},system:{id:'dnd5e'},modules,
   scenes:new Map([[sceneId,scene]]),actors:new Map([[tokenId,token.actor]])};
@@ -103,7 +103,7 @@ async function main() {
 
   const assetId = 'jb2a.spark.blue';
   let file = 'modules/JB2A_DnD5e/spark.webm';
-  globalThis.Sequencer = {Database:{getPathsUnder:() => [assetId], getAllFileEntries:() => [file]}};
+  globalThis.Sequencer = {Database:{entryExists:() => true, getPathsUnder:() => [assetId], getAllFileEntries:() => [file]}};
   let played = 0;
   globalThis.Sequence = class {
     effect() {return this;}
@@ -125,6 +125,19 @@ async function main() {
   assert.equal(played,0);
   await run('play-module-media',media);
   assert.equal(played,1);
+  const sounds = 'modules/soundfxlibrary/Combat/Loops/Swordfight';
+  const browsed = [];
+  globalThis.foundry = {applications:{apps:{FilePicker:{implementation:{async browse(source,folder) {
+    assert.equal(source,'data');
+    browsed.push(folder);
+    if (folder === 'modules/soundfxlibrary/Combat/Loops') {
+      return {dirs:['/' + sounds + '/', 'modules/another-module', 'modules/soundfxlibrary/%2e%2e/elsewhere']};
+    }
+    if (folder === sounds) return {files:['/' + sounds + '/clash.mp3'],dirs:[sounds]};
+    return {};
+  }}}}}};
+  assert.deepEqual((await run('search-module-media',{library:'soundfxlibrary',query:'clash'})).entries,[sounds + '/clash.mp3']);
+  assert.equal(browsed.length,13);
   modules.get('animater').api = {
     recipes: () => [{id:'spark',name:'Spark',stages:[{kind:'cast',assets:[assetId],persist:true,duration:60000}]}],
     async play(recipe, context) {
